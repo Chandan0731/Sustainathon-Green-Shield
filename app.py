@@ -2,63 +2,56 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import math
+import plotly.express as px
 
-# --- 1. CUSTOM UI STYLING (THE UPGRADE) ---
-# This forces the app into 'wide' mode and injects custom CSS for a premium look
-st.set_page_config(page_title="Green Shield Dashboard", layout="wide", initial_sidebar_state="expanded")
+# --- 1. PROFESSIONAL UI STYLING ---
+st.set_page_config(page_title="Green Shield Intelligence", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
-    /* Premium Dark Gradient Background */
     .stApp {
-        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        background: linear-gradient(135deg, #0a1128, #1c2541, #3a506b);
         color: #ffffff;
     }
-    /* Sidebar Styling */
     [data-testid="stSidebar"] {
-        background-color: rgba(15, 32, 39, 0.9) !important;
+        background-color: rgba(10, 17, 40, 0.95) !important;
     }
-    /* Neon Green Accents for Headers */
     h1, h2, h3 {
-        color: #00ffcc !important;
-        font-family: 'Helvetica Neue', sans-serif;
+        color: #5bc0be !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 600;
     }
-    /* Metric Card Styling */
     div[data-testid="metric-container"] {
-        background-color: rgba(255, 255, 255, 0.05);
-        border: 1px solid #00ffcc;
-        border-radius: 10px;
+        background-color: rgba(255, 255, 255, 0.03);
+        border: 1px solid #5bc0be;
+        border-radius: 8px;
         padding: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DASHBOARD HEADER ---
-st.title("🛡️ Green Shield: SDG 9 Infrastructure Intelligence")
+# --- 2. DASHBOARD HEADER (NO EMOJIS) ---
+st.title("Green Shield: Infrastructure Intelligence")
 st.write("Predictive modeling of reinforced concrete service life utilizing Calotropis secondary metabolites.")
 
-# --- 3. SIDEBAR PARAMETERS (INCLUDING YOUR NEW FINDINGS) ---
-st.sidebar.header("🔬 Experimental Parameters")
-st.sidebar.write("Input your lab findings here:")
+# --- 3. SIDEBAR PARAMETERS ---
+st.sidebar.header("Experimental Parameters")
 
-# Adding a new attribute for environmental exposure
-exposure_type = st.sidebar.selectbox("Environmental Exposure", ["Standard City", "Coastal/Marine (High Chloride)", "Industrial (Acidic)"])
+exposure_type = st.sidebar.selectbox("Environmental Exposure", ["Standard Urban", "Coastal/Marine", "Industrial"])
 
-# Adjusting base chloride levels based on exposure
-if exposure_type == "Standard City":
+if exposure_type == "Standard Urban":
     Cs = 1.5
-elif exposure_type == "Coastal/Marine (High Chloride)":
+elif exposure_type == "Coastal/Marine":
     Cs = 4.0
 else:
     Cs = 3.0
 
 cover_depth = st.sidebar.slider("Concrete Cover Depth (mm)", 20, 75, 40)
-
-# This is where your 24hr HCl test results shine!
 inhibition_eff = st.sidebar.slider("Calotropis Inhibition Efficiency (%)", 0.0, 99.9, 84.3, step=0.1) 
 
 # --- 4. THE MATH & SIMULATION ---
-base_Dc = 1.5 
+base_Dc = 15.0 # INCREASED to realistic diffusion rate
 protected_Dc = base_Dc * (1 - (inhibition_eff / 100.0)) 
 critical_threshold = 0.4 
 
@@ -73,7 +66,6 @@ years = np.arange(0, 101, 1)
 standard_conc = []
 protected_conc = []
 
-# Calculate penetration
 for t in years:
     if t == 0:
         standard_conc.append(0)
@@ -85,28 +77,46 @@ for t in years:
         z_prot = cover_depth / (2 * math.sqrt(protected_Dc * t))
         protected_conc.append(Cs * (1 - erf_approx(z_prot)))
 
-# --- 5. RESULTS & IMPACT METRICS (NEW SECTION) ---
-# Calculate the exact year they cross the 0.4 threshold
+# --- 5. RESULTS & IMPACT METRICS ---
 std_failure_year = next((i for i, v in enumerate(standard_conc) if v >= critical_threshold), 100)
 prot_failure_year = next((i for i, v in enumerate(protected_conc) if v >= critical_threshold), 100)
 years_added = prot_failure_year - std_failure_year
 
-# Assuming 0.9kg of CO2 per 1kg of cement saved by not rebuilding
-co2_saved_tons = years_added * 12.5 # Estimated tons of CO2 saved per 1000 sq ft over the added lifespan
+co2_saved_tons = round(years_added * 12.5, 1) 
 
-st.subheader("🌍 Sustainability Impact (SDG 9 & 13)")
+st.subheader("Sustainability Impact Assessment")
 col1, col2, col3 = st.columns(3)
-col1.metric("Standard Life", f"{std_failure_year} Years")
-col2.metric("Green Shield Life", f"{prot_failure_year} Years", f"+{years_added} Years Added")
+col1.metric("Standard Service Life", f"{std_failure_year} Years")
+col2.metric("Green Shield Service Life", f"{prot_failure_year} Years", f"+{years_added} Years Extended")
 col3.metric("CO₂ Emissions Prevented", f"{co2_saved_tons} Tons", "per 1000 sq.ft")
 
-# --- 6. THE VISUALIZATION ---
-df = pd.DataFrame({
+# --- 6. PLOTLY VISUALIZATION (PROFESSIONAL GRAPH) ---
+# Data organization for Plotly
+df_plot = pd.DataFrame({
     "Year": years,
-    "Standard RCC (%)": standard_conc,
-    "Protected RCC (%)": protected_conc
+    "Standard RCC": standard_conc,
+    "Protected RCC": protected_conc
 })
-df.set_index("Year", inplace=True)
 
-st.subheader("📊 Chloride Diffusion Trajectory")
-st.line_chart(df, color=["#ff4b4b", "#00ffcc"]) # Red for failure, Neon Green for your inhibitor
+# Melt the dataframe so Plotly can draw multiple lines easily
+df_melted = df_plot.melt(id_vars=["Year"], var_name="Concrete Type", value_name="Concentration")
+
+st.subheader("Chloride Diffusion Trajectory")
+
+# Create the professional Plotly chart
+fig = px.line(df_melted, x="Year", y="Concentration", color="Concrete Type",
+              color_discrete_map={"Standard RCC": "#ff4b4b", "Protected RCC": "#5bc0be"})
+
+# Add the critical threshold line
+fig.add_hline(y=critical_threshold, line_dash="dot", line_color="red", annotation_text="Critical Threshold (Rust Begins)")
+
+# Update Axis Labels and background to fit the dark theme
+fig.update_layout(
+    xaxis_title="Service Life (Years)",
+    yaxis_title="Chloride Concentration (%)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    paper_bgcolor="rgba(0,0,0,0)",
+    font=dict(color="#ffffff")
+)
+
+st.plotly_chart(fig, use_container_width=True)
